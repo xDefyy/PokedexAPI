@@ -2,9 +2,6 @@
 
 Kader Pokédex es una aplicación desarrollada en Flutter que permite explorar Pokémon utilizando la API de [PokéAPI](https://pokeapi.co/). La aplicación carga y muestra una lista de Pokémon con imágenes, permite búsqueda y carga infinita a medida que el usuario se desplaza.
 
-## 📸 Capturas de Pantalla
-*(Añade aquí capturas de pantalla de la aplicación en funcionamiento.)*
-
 ## 🚀 Características
 - 📜 Lista de Pokémon con imágenes y nombres.
 - 🔍 Búsqueda en tiempo real.
