@@ -1,15 +1,22 @@
-# PokeAPI en Flutter y Dart
+# 📖 Kader Pokédex
 
-## Descripción
-Este proyecto demuestra cómo integrar y consumir la PokeAPI utilizando Flutter y Dart. La PokeAPI es una API pública que proporciona acceso a los datos de los Pokémon, incluidas sus estadísticas, habilidades, movimientos y más. Este ejemplo de integración tiene como objetivo mostrar cómo realizar solicitudes HTTP a la API y presentar los datos obtenidos en una interfaz Flutter.
+Kader Pokédex es una aplicación desarrollada en Flutter que permite explorar Pokémon utilizando la API de [PokéAPI](https://pokeapi.co/). La aplicación carga y muestra una lista de Pokémon con imágenes, permite búsqueda y carga infinita a medida que el usuario se desplaza.
 
-La implementación se centra en cómo hacer solicitudes simples a la API de PokeAPI y manejar la respuesta para mostrarla en la UI de Flutter, como una lista de Pokémon, sus detalles o estadísticas.
+## 📸 Capturas de Pantalla
+*(Añade aquí capturas de pantalla de la aplicación en funcionamiento.)*
 
-## Instalación
+## 🚀 Características
+- 📜 Lista de Pokémon con imágenes y nombres.
+- 🔍 Búsqueda en tiempo real.
+- 🔄 Carga automática de más Pokémon al desplazarse.
+- 🔄 Funcionalidad de "pull to refresh" para actualizar la lista.
 
-Para comenzar con el proyecto en tu máquina local, sigue estos pasos:
+## 🛠️ Tecnologías Utilizadas
+- [Flutter](https://flutter.dev/)
+- [Dart](https://dart.dev/)
+- [PokéAPI](https://pokeapi.co/)
 
-1. **Clona el repositorio**:
-   Clona el repositorio en tu máquina local utilizando el siguiente comando:
-   ```bash
-   git clone https://github.com/xDeffyy/pokeapi-flutter.git
+## 📂 Estructura del Proyecto
+La estructura del proyecto está organizada de la siguiente manera:
+
+📂 lib/ ├── 📂 class/ # Modelos de datos │ ├── pokemon.dart # Modelo de Pokémon con conversión desde JSON │ ├── 📂 data/ # Módulo de acceso a datos │ ├── characterr_api.dart # Clase para obtener Pokémon desde la API │ ├── 📂 screens/ # Pantallas de la aplicación │ ├── pokewidget.dart # Widget principal con la lista de Pokémon │ ├── main.dart # Archivo principal que inicializa la app
