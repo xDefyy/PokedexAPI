@@ -2,8 +2,8 @@ class Pokemon {
   final String name;
   final String url;
   final List<String> types;
-  final int weight;
-  final int height;
+  final String height;
+  final String weight;
   final Map<String, int> baseStats;
   bool isFavorite;
 
@@ -11,42 +11,30 @@ class Pokemon {
     required this.name,
     required this.url,
     required this.types,
-    required this.weight,
     required this.height,
+    required this.weight,
     required this.baseStats,
     this.isFavorite = false,
   });
 
   factory Pokemon.fromJson(Map<String, dynamic> json) {
+    var typesList = <String>[];
+    for (var type in json['types']) {
+      typesList.add(type['type']['name']);
+    }
+
+    Map<String, int> baseStatsMap = {};
+    for (var stat in json['stats']) {
+      baseStatsMap[stat['stat']['name']] = stat['base_stat'];
+    }
+
     return Pokemon(
       name: json['name'],
-      url: json['sprites']['front_default'],
-      types: (json['types'] as List)
-          .map((type) => type['type']['name'] as String)
-          .toList(),
-      weight: json['weight'],
-      height: json['height'],
-      baseStats: {
-        'hp': json['stats'][0]['base_stat'],
-        'attack': json['stats'][1]['base_stat'],
-        'defense': json['stats'][2]['base_stat'],
-        'special-attack': json['stats'][3]['base_stat'],
-        'special-defense': json['stats'][4]['base_stat'],
-        'speed': json['stats'][5]['base_stat'],
-      },
-      isFavorite: json['isFavorite'] ?? false,
+      url: json['sprites']['front_default'], // Image URL for the Pokémon
+      types: typesList,
+      height: json['height'].toString(),
+      weight: json['weight'].toString(),
+      baseStats: baseStatsMap,
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'url': url,
-      'types': types,
-      'weight': weight,
-      'height': height,
-      'baseStats': baseStats,
-      'isFavorite': isFavorite,
-    };
   }
 }

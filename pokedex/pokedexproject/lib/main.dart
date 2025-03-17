@@ -22,12 +22,6 @@ class MainApp extends StatelessWidget {
         primaryColor: Colors.blueGrey,
       ),
       home: Scaffold(
-        appBar: AppBar(
-          title: Text('Kader Pokédex'),
-          centerTitle: true,
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-        ),
         body: PokeWidget(),
       ),
     );
