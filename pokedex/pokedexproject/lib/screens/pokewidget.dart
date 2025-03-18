@@ -1,11 +1,21 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:pokedexproject/class/pokemon.dart';
 import 'package:pokedexproject/data/characterr_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pokedexproject/widgets/pokemon_card.dart';
+import 'package:pokedexproject/widgets/pokemon_stats_chart.dart';
 
 class PokeWidget extends StatefulWidget {
-  PokeWidget({Key? key}) : super(key: key);
+  final Function() onThemeToggle;
+  final bool isDarkMode;
+
+  const PokeWidget({
+    Key? key,
+    required this.onThemeToggle,
+    required this.isDarkMode,
+  }) : super(key: key);
 
   @override
   _PokeWidgetState createState() => _PokeWidgetState();
@@ -48,16 +58,20 @@ class _PokeWidgetState extends State<PokeWidget> {
     super.initState();
     _loadFavorites();
     getCharactersfromApi();
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels ==
-          _scrollController.position.maxScrollExtent) {
+    _scrollController.addListener(_scrollListener);
+  }
+
+  void _scrollListener() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 500) {
+      if (!isLoading) {
         if (selectedType.isEmpty) {
           getCharactersfromApi();
         } else {
           getCharactersByType(selectedType);
         }
       }
-    });
+    }
   }
 
   void getCharactersfromApi() async {
@@ -69,18 +83,21 @@ class _PokeWidgetState extends State<PokeWidget> {
 
     try {
       final List<Pokemon> response = await characterApi.getPokemon(offset);
-      setState(() {
-        pokeList.addAll(response);
-        _loadFavorites();
-        filteredPokeList = List.from(pokeList);
-        offset += 20;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          pokeList.addAll(response);
+          _loadFavorites();
+          filteredPokeList = List.from(pokeList);
+          offset += 20;
+          isLoading = false;
+        });
+      }
     } catch (error) {
-      setState(() {
-        isLoading = false;
-      });
-      throw Exception('Failed to load Pokémon');
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -146,9 +163,30 @@ class _PokeWidgetState extends State<PokeWidget> {
       selectedType = type;
       offset = 0;
       pokeList.clear();
+      filteredPokeList.clear();
     });
 
-    getCharactersByType(type);
+    try {
+      final List<Pokemon> response =
+          await characterApi.getPokemonByType(type.toLowerCase());
+      if (mounted) {
+        setState(() {
+          pokeList = response;
+          _loadFavorites();
+          filteredPokeList = List.from(pokeList);
+          isLoading = false;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading Pokémon of type $type')),
+        );
+      }
+    }
   }
 
   void _filterFavorites() {
@@ -183,60 +221,114 @@ class _PokeWidgetState extends State<PokeWidget> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.lightBlue[50],
-          title: Text(
-            pokemon.name,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
+        final Color typeColor =
+            typeColors[pokemon.types.first.toLowerCase()] ?? Colors.grey;
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: typeColor,
+                width: 2,
+              ),
             ),
-          ),
-          content: Container(
-            color: Colors.lightBlue[50],
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.network(pokemon.url),
-                SizedBox(height: 10),
-                Text(
-                  'Type(s): ${pokemon.types.join(', ')}',
-                  style: TextStyle(fontSize: 16),
-                ),
-                Text(
-                  'Weight: ${pokemon.weight}',
-                  style: TextStyle(fontSize: 16),
-                ),
-                Text(
-                  'Height: ${pokemon.height}',
-                  style: TextStyle(fontSize: 16),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  'Base Stats:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: typeColors[pokemon.types.first.toLowerCase()]
+                          ?.withOpacity(0.2),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(18)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          pokemon.name.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                        Image.network(
+                          pokemon.url,
+                          height: 150,
+                          width: 150,
+                        ),
+                        SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: pokemon.types
+                              .map((type) => Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 4),
+                                    child: Chip(
+                                      label: Text(
+                                        type,
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                      backgroundColor:
+                                          typeColors[type.toLowerCase()] ??
+                                              Colors.grey,
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Text('HP: ${pokemon.baseStats['hp']}'),
-                Text('Attack: ${pokemon.baseStats['attack']}'),
-                Text('Defense: ${pokemon.baseStats['defense']}'),
-                Text('Special Attack: ${pokemon.baseStats['special-attack']}'),
-                Text(
-                    'Special Defense: ${pokemon.baseStats['special-defense']}'),
-                Text('Speed: ${pokemon.baseStats['speed']}'),
-              ],
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            InfoCard(
+                              title: 'Height',
+                              value: pokemon.height,
+                              icon: Icons.height,
+                            ),
+                            InfoCard(
+                              title: 'Weight',
+                              value: pokemon.weight,
+                              icon: Icons.fitness_center,
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 20),
+                        Text(
+                          'Base Stats',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                        PokemonStatsChart(
+                          stats: pokemon.baseStats,
+                          color: typeColor,
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    child: Text('Close'),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              child: Text('Close'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
         );
       },
     );
@@ -246,25 +338,34 @@ class _PokeWidgetState extends State<PokeWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Pokedex'),
+        title: Image.network(
+          'https://raw.githubusercontent.com/PokeAPI/media/master/logo/pokeapi_256.png',
+          height: 50,
+        ),
         actions: [
           IconButton(
             icon: Icon(
-                showFavoritesOnly ? Icons.favorite : Icons.favorite_border),
+              widget.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              color: widget.isDarkMode ? Colors.white : Colors.black,
+            ),
+            onPressed: widget.onThemeToggle,
+          ),
+          IconButton(
+            icon: Icon(
+              showFavoritesOnly ? Icons.favorite : Icons.favorite_border,
+              color: widget.isDarkMode ? Colors.white : Colors.black,
+            ),
             onPressed: _filterFavorites,
           ),
         ],
       ),
-      backgroundColor: Colors.white,
       body: Padding(
         padding: const EdgeInsets.all(10.0),
         child: Container(
-          color: Colors.white,
           child: RefreshIndicator(
             onRefresh: _refresh,
             child: Column(
               children: [
-                // Search Bar
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
@@ -284,16 +385,15 @@ class _PokeWidgetState extends State<PokeWidget> {
                           },
                         ),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.search),
-                        onPressed: () {
-                          _filterPokemonList(_searchController.text);
-                        },
-                      ),
+                      // IconButton(
+                      //   icon: Icon(Icons.search),
+                      //   onPressed: () {
+                      //     _filterPokemonList(_searchController.text);
+                      //   },
+                      // ),
                     ],
                   ),
                 ),
-                // Choice Chips (for types)
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -304,13 +404,15 @@ class _PokeWidgetState extends State<PokeWidget> {
                         child: ChoiceChip(
                           label: Text(type),
                           selected: selectedType == type,
+                          selectedColor: typeColors[type.toLowerCase()]
+                              ?.withOpacity(0.3), // Add color based on type
                           onSelected: (selected) {
                             if (selected) {
                               _filterByType(type);
                             } else {
                               setState(() {
                                 selectedType = '';
-                                filteredPokeList = List.from(pokeList);
+                                _refresh(); // Reset and reload all Pokémon
                               });
                             }
                           },
@@ -319,7 +421,6 @@ class _PokeWidgetState extends State<PokeWidget> {
                     }).toList(),
                   ),
                 ),
-                // Pokémon List
                 Expanded(
                   child: filteredPokeList.isEmpty
                       ? Center(child: CircularProgressIndicator())
@@ -349,6 +450,57 @@ class _PokeWidgetState extends State<PokeWidget> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class InfoCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+
+  const InfoCard({
+    Key? key,
+    required this.title,
+    required this.value,
+    required this.icon,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 24),
+          SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
