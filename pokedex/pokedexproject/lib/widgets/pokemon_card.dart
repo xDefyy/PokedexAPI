@@ -24,14 +24,14 @@ const Map<String, Color> typeColors = {
 
 class PokemonCard extends StatelessWidget {
   final Pokemon pokemon;
-  final Function(Pokemon) onFavoriteToggle;
   final Function(Pokemon) onTap;
+  final VoidCallback onFavoriteToggle;
 
   const PokemonCard({
     Key? key,
     required this.pokemon,
-    required this.onFavoriteToggle,
     required this.onTap,
+    required this.onFavoriteToggle,
   }) : super(key: key);
 
   Widget _buildTypeChip(String type) {
@@ -133,7 +133,7 @@ class PokemonCard extends StatelessWidget {
                   pokemon.isFavorite ? Icons.favorite : Icons.favorite_border,
                   color: pokemon.isFavorite ? Colors.red : Colors.black54,
                 ),
-                onPressed: () => onFavoriteToggle(pokemon),
+                onPressed: () => onFavoriteToggle(),
               ),
             ),
           ],

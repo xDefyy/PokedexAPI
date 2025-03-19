@@ -1,0 +1,1 @@
+C:\Users\alumnat\Documents\GitHub\PokedexAPI\pokedex\pokedexproject\build\app\intermediates\cxx\Debug\1e4x304n\obj\armeabi-v7a

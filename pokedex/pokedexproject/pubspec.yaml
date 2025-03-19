@@ -11,7 +11,7 @@ dependencies:
     sdk: flutter
   http: ^1.3.0
   shared_preferences: ^2.0.6
-  fl_chart: ^0.66.0 # Replace syncfusion_flutter_charts with fl_chart
+  fl_chart: ^0.66.0
 
 dev_dependencies:
   flutter_test:

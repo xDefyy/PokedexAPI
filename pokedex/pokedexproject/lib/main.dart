@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pokedexproject/screens/pokewidget.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MainApp());
 }
 
@@ -30,9 +31,13 @@ class _MainAppState extends State<MainApp> {
         brightness: Brightness.light,
         primaryColor: const Color.fromARGB(255, 255, 255, 255),
         scaffoldBackgroundColor: Colors.white,
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,
           foregroundColor: Colors.white,
+        ),
+        scrollbarTheme: const ScrollbarThemeData(
+          thickness: MaterialStatePropertyAll(6.0),
+          thumbColor: MaterialStatePropertyAll(Colors.grey),
         ),
       ),
       darkTheme: ThemeData(
@@ -42,6 +47,10 @@ class _MainAppState extends State<MainApp> {
         appBarTheme: AppBarTheme(
           backgroundColor: Colors.grey[900],
           foregroundColor: Colors.white,
+        ),
+        scrollbarTheme: const ScrollbarThemeData(
+          thickness: MaterialStatePropertyAll(6.0),
+          thumbColor: MaterialStatePropertyAll(Colors.grey),
         ),
       ),
       home: PokeWidget(onThemeToggle: toggleTheme, isDarkMode: isDarkMode),
