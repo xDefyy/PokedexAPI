@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:pokedexproject/class/pokemon.dart';
 import 'package:pokedexproject/data/characterr_api.dart';
+import 'package:pokedexproject/widgets/info_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pokedexproject/widgets/pokemon_card.dart';
 import 'package:pokedexproject/widgets/pokemon_stats_chart.dart';
+import 'package:pokedexproject/widgets/pokemon_list_item.dart';
+import 'package:pokedexproject/widgets/pokeball_loading.dart';
 
 class PokeWidget extends StatefulWidget {
   final Function() onThemeToggle;
@@ -31,10 +34,11 @@ class _PokeWidgetState extends State<PokeWidget> {
   final TextEditingController _searchController = TextEditingController();
   String selectedType = '';
   bool showFavoritesOnly = false;
+  bool isAlphabeticalSort = false;
 
-  // Add cache map
   final Map<int, List<Pokemon>> _pageCache = {};
   static const int pageSize = 20;
+  bool hasMorePokemons = true;
 
   final List<String> pokemonTypes = [
     'Normal',
@@ -57,12 +61,12 @@ class _PokeWidgetState extends State<PokeWidget> {
     'Fairy'
   ];
 
-  bool isGridView = true; // true for grid, false for list
+  bool isGridView = true;
 
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
+    // _loadFavorites();
     getCharactersfromApi();
     _scrollController.addListener(_scrollListener);
   }
@@ -70,47 +74,48 @@ class _PokeWidgetState extends State<PokeWidget> {
   void _scrollListener() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 500) {
-      if (!isLoading) {
-        if (selectedType.isEmpty) {
-          getCharactersfromApi();
-        } else {
-          getCharactersByType(selectedType);
-        }
+      if (!isLoading && selectedType.isEmpty && hasMorePokemons) {
+        getCharactersfromApi();
       }
     }
   }
 
   void getCharactersfromApi() async {
-    if (isLoading) return;
+    if (isLoading || !hasMorePokemons) return;
 
     setState(() {
       isLoading = true;
     });
 
     try {
-      // Check cache first
       if (_pageCache.containsKey(offset ~/ pageSize)) {
         final cachedList = _pageCache[offset ~/ pageSize]!;
         setState(() {
-          pokeList.addAll(cachedList);
-          _loadFavorites();
-          filteredPokeList = List.from(pokeList);
-          offset += pageSize;
+          if (cachedList.isEmpty) {
+            hasMorePokemons = false;
+          } else {
+            pokeList.addAll(cachedList);
+            _loadFavorites();
+            filteredPokeList = List.from(pokeList);
+            offset += pageSize;
+          }
           isLoading = false;
         });
         return;
       }
 
-      final List<Pokemon> response = await characterApi.getPokemon(offset);
+      final List<Pokemon> response = await characterApi.getAllPokemons();
       if (mounted) {
-        // Cache the new page
-        _pageCache[offset ~/ pageSize] = response;
-
         setState(() {
-          pokeList.addAll(response);
-          _loadFavorites();
-          filteredPokeList = List.from(pokeList);
-          offset += pageSize;
+          if (response.isEmpty) {
+            hasMorePokemons = false;
+          } else {
+            _pageCache[offset ~/ pageSize] = response;
+            pokeList.addAll(response);
+            _loadFavorites();
+            filteredPokeList = List.from(pokeList);
+            offset += pageSize;
+          }
           isLoading = false;
         });
       }
@@ -118,6 +123,7 @@ class _PokeWidgetState extends State<PokeWidget> {
       if (mounted) {
         setState(() {
           isLoading = false;
+          hasMorePokemons = false;
         });
       }
     }
@@ -131,7 +137,8 @@ class _PokeWidgetState extends State<PokeWidget> {
     });
 
     try {
-      final List<Pokemon> response = await characterApi.getPokemonByType(type);
+      final List<Pokemon> response =
+          await characterApi.getAllPokemonByType(type);
       setState(() {
         pokeList.addAll(response);
         _loadFavorites();
@@ -150,6 +157,11 @@ class _PokeWidgetState extends State<PokeWidget> {
   void _loadFavorites() async {
     final prefs = await SharedPreferences.getInstance();
     final favoritePokemons = prefs.getStringList('favoritePokemons') ?? [];
+    if (favoritePokemons.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No favorite Pokémon found')),
+      );
+    }
     setState(() {
       pokeList.forEach((pokemon) {
         if (favoritePokemons.contains(pokemon.name)) {
@@ -190,7 +202,7 @@ class _PokeWidgetState extends State<PokeWidget> {
 
     try {
       final List<Pokemon> response =
-          await characterApi.getPokemonByType(type.toLowerCase());
+          await characterApi.getAllPokemonByType(type.toLowerCase());
       if (mounted) {
         setState(() {
           pokeList = response;
@@ -218,6 +230,18 @@ class _PokeWidgetState extends State<PokeWidget> {
         filteredPokeList =
             pokeList.where((pokemon) => pokemon.isFavorite).toList();
       } else {
+        filteredPokeList = List.from(pokeList);
+      }
+    });
+  }
+
+  void _toggleSort() {
+    setState(() {
+      isAlphabeticalSort = !isAlphabeticalSort;
+      if (isAlphabeticalSort) {
+        filteredPokeList.sort((a, b) => a.name.compareTo(b.name));
+      } else {
+        // Reset to original API order
         filteredPokeList = List.from(pokeList);
       }
     });
@@ -264,8 +288,7 @@ class _PokeWidgetState extends State<PokeWidget> {
                   Container(
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: typeColors[pokemon.types.first.toLowerCase()]
-                          ?.withOpacity(0.2),
+                      color: typeColor.withAlpha(51),
                       borderRadius:
                           BorderRadius.vertical(top: Radius.circular(18)),
                     ),
@@ -280,12 +303,26 @@ class _PokeWidgetState extends State<PokeWidget> {
                           ),
                         ),
                         SizedBox(height: 10),
-                        Image.network(
-                          pokemon.url,
-                          height: 150,
-                          width: 150,
+                        Hero(
+                          tag: 'pokemon-${pokemon.name}',
+                          child: Image.network(
+                            pokemon.url,
+                            fit: BoxFit.contain,
+                            loadingBuilder: (BuildContext context, Widget child,
+                                ImageChunkEvent? loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const PokeballLoading();
+                            },
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Center(
+                              child: Icon(
+                                Icons.broken_image_rounded,
+                                size: 80,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ),
                         ),
-                        SizedBox(height: 10),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: pokemon.types
@@ -356,6 +393,16 @@ class _PokeWidgetState extends State<PokeWidget> {
     );
   }
 
+  Widget _buildListItem(int index) {
+    return PokemonListItem(
+      pokemon: filteredPokeList[index],
+      onTap: _showPokemonDetails,
+      onFavoriteToggle: () => _toggleFavorite(filteredPokeList[index]),
+      isDarkMode: widget.isDarkMode,
+      typeColors: typeColors,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -389,6 +436,16 @@ class _PokeWidgetState extends State<PokeWidget> {
                 isGridView = !isGridView;
               });
             },
+          ),
+          IconButton(
+            icon: Icon(
+              isAlphabeticalSort ? Icons.sort_by_alpha : Icons.sort,
+              color: widget.isDarkMode ? Colors.white : Colors.black,
+            ),
+            tooltip: isAlphabeticalSort
+                ? 'Sort by default order'
+                : 'Sort alphabetically',
+            onPressed: _toggleSort,
           ),
         ],
       ),
@@ -436,8 +493,8 @@ class _PokeWidgetState extends State<PokeWidget> {
                       child: ChoiceChip(
                         label: Text(type),
                         selected: selectedType == type,
-                        selectedColor:
-                            typeColors[type.toLowerCase()]?.withOpacity(0.3),
+                        selectedColor: typeColors[type.toLowerCase()]
+                            ?.withAlpha(77), // 0.3 opacity = 77 alpha
                         onSelected: (selected) {
                           if (selected) {
                             _filterByType(type);
@@ -455,18 +512,39 @@ class _PokeWidgetState extends State<PokeWidget> {
               ),
               Expanded(
                 child: filteredPokeList.isEmpty
-                    ? Center(child: CircularProgressIndicator())
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/loading_pokeball.gif',
+                              height: 100,
+                              width: 100,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Cargando los Pokémon...',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: widget.isDarkMode
+                                    ? Colors.white
+                                    : Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
                     : isGridView
                         ? GridView.builder(
                             controller: _scrollController,
-                            physics: const BouncingScrollPhysics(
-                              parent: AlwaysScrollableScrollPhysics(),
-                            ),
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            cacheExtent:
+                                1000, // Aumenta el cache para scroll más suave
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3, // Changed from 2 to 3
-                              childAspectRatio:
-                                  0.75, // Adjusted for better card proportions
+                              crossAxisCount: 3,
+                              childAspectRatio: 0.75,
                               crossAxisSpacing: 8,
                               mainAxisSpacing: 8,
                             ),
@@ -477,20 +555,22 @@ class _PokeWidgetState extends State<PokeWidget> {
                                 return const Center(
                                     child: CircularProgressIndicator());
                               }
-                              return PokemonCard(
-                                pokemon: filteredPokeList[index],
-                                onTap: (pokemon) =>
-                                    _showPokemonDetails(pokemon),
-                                onFavoriteToggle: () =>
-                                    _toggleFavorite(filteredPokeList[index]),
+                              return RepaintBoundary(
+                                child: PokemonCard(
+                                  key: ValueKey(filteredPokeList[index].name),
+                                  pokemon: filteredPokeList[index],
+                                  onTap: (pokemon) =>
+                                      _showPokemonDetails(pokemon),
+                                  onFavoriteToggle: () =>
+                                      _toggleFavorite(filteredPokeList[index]),
+                                ),
                               );
                             },
                           )
                         : ListView.builder(
                             controller: _scrollController,
-                            physics: const BouncingScrollPhysics(
-                              parent: AlwaysScrollableScrollPhysics(),
-                            ),
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            cacheExtent: 1000,
                             itemCount:
                                 filteredPokeList.length + (isLoading ? 1 : 0),
                             itemBuilder: (context, index) {
@@ -498,97 +578,8 @@ class _PokeWidgetState extends State<PokeWidget> {
                                 return const Center(
                                     child: CircularProgressIndicator());
                               }
-                              final String primaryType = filteredPokeList[index]
-                                  .types
-                                  .first
-                                  .toLowerCase();
-                              final Color cardColor =
-                                  typeColors[primaryType] ?? Colors.grey;
-
-                              return Card(
-                                elevation: 5,
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                color: cardColor.withOpacity(0.1),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15.0),
-                                  side: BorderSide(color: cardColor, width: 2),
-                                ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.all(12),
-                                  leading: Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.8),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Image.network(
-                                      filteredPokeList[index].url,
-                                      fit: BoxFit.contain,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              const Icon(Icons.error),
-                                    ),
-                                  ),
-                                  title: Text(
-                                    filteredPokeList[index].name,
-                                    style: TextStyle(
-                                      color: widget.isDarkMode
-                                          ? Colors.white
-                                          : Colors.black87,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  subtitle: Wrap(
-                                    spacing: 4,
-                                    children: filteredPokeList[index]
-                                        .types
-                                        .map((type) {
-                                      final Color typeColor =
-                                          typeColors[type.toLowerCase()] ??
-                                              Colors.grey;
-                                      return Container(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 6, vertical: 2),
-                                        margin: EdgeInsets.only(top: 4),
-                                        decoration: BoxDecoration(
-                                          color: typeColor,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: typeColor,
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          type,
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                  trailing: IconButton(
-                                    icon: Icon(
-                                      filteredPokeList[index].isFavorite
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                      color: filteredPokeList[index].isFavorite
-                                          ? Colors.red
-                                          : Colors.black54,
-                                      size: 24,
-                                    ),
-                                    onPressed: () => _toggleFavorite(
-                                        filteredPokeList[index]),
-                                  ),
-                                  onTap: () => _showPokemonDetails(
-                                      filteredPokeList[index]),
-                                ),
+                              return RepaintBoundary(
+                                child: _buildListItem(index),
                               );
                             },
                           ),
@@ -596,57 +587,6 @@ class _PokeWidgetState extends State<PokeWidget> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class InfoCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-
-  const InfoCard({
-    Key? key,
-    required this.title,
-    required this.value,
-    required this.icon,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 24),
-          SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
       ),
     );
   }

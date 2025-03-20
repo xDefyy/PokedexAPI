@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pokedexproject/class/pokemon.dart';
+import 'package:pokedexproject/widgets/pokeball_loading.dart';
 
 const Map<String, Color> typeColors = {
   'normal': Colors.brown,
@@ -50,7 +51,7 @@ class PokemonCard extends StatelessWidget {
         type,
         style: TextStyle(
           color: Colors.white,
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -65,8 +66,8 @@ class PokemonCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => onTap(pokemon),
       child: Card(
-        color: cardColor.withOpacity(0.1),
-        elevation: 5,
+        color: cardColor.withAlpha(26),
+        elevation: 0, // Changed from 5 to 0 to remove shadow
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15.0),
           side: BorderSide(color: cardColor, width: 2),
@@ -77,12 +78,28 @@ class PokemonCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
-                  child: ClipRRect(
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(15.0)),
-                    child: Image.network(
-                      pokemon.url,
-                      fit: BoxFit.cover,
+                  child: Hero(
+                    tag: 'pokemon-${pokemon.name}',
+                    child: ClipRRect(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(15.0)),
+                      child: Image.network(
+                        pokemon.url,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (BuildContext context, Widget child,
+                            ImageChunkEvent? loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const PokeballLoading();
+                        },
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Center(
+                          child: Icon(
+                            Icons.broken_image_rounded,
+                            size: 60,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),

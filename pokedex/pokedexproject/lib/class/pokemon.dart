@@ -30,7 +30,7 @@ class Pokemon {
 
     return Pokemon(
       name: json['name'],
-      url: json['sprites']['front_default'], // Image URL for the Pokémon
+      url: json['sprites']['front_default'],
       types: typesList,
       height: json['height'].toString(),
       weight: json['weight'].toString(),

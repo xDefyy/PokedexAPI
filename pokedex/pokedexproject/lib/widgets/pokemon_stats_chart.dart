@@ -15,115 +15,106 @@ class PokemonStatsChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 200,
-      padding: EdgeInsets.all(8),
+      height: 300, // Increased from default height
+      padding: const EdgeInsets.all(16),
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.center,
           maxY: 200,
           minY: 0,
           groupsSpace: 12,
-          barTouchData: BarTouchData(
-            enabled: true,
-            touchTooltipData: BarTouchTooltipData(
-              tooltipBgColor: Colors.black87,
-              tooltipRoundedRadius: 8,
-              tooltipPadding: EdgeInsets.all(8),
-              tooltipMargin: 8,
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                String statName =
-                    stats.keys.elementAt(group.x.toInt()).toUpperCase();
-                return BarTooltipItem(
-                  '$statName\n${rod.toY.toInt()}',
-                  const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-              },
-            ),
-          ),
+          barGroups: [
+            makeGroupData(0, stats['hp'] ?? 0, Colors.green),
+            makeGroupData(1, stats['attack'] ?? 0, Colors.red),
+            makeGroupData(2, stats['defense'] ?? 0, Colors.blue),
+            makeGroupData(
+                3, stats['special-attack'] ?? 0, Colors.deepPurpleAccent),
+            makeGroupData(4, stats['special-defense'] ?? 0, Colors.pink),
+            makeGroupData(5, stats['speed'] ?? 0, Colors.grey),
+          ],
           titlesData: FlTitlesData(
             show: true,
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  if (value.toInt() >= stats.keys.length) {
-                    return Container();
-                  }
-                  String text = stats.keys
-                      .elementAt(value.toInt())
-                      .split('-')
-                      .map((word) => word[0].toUpperCase())
-                      .join('');
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      text,
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  );
-                },
-                reservedSize: 30,
+                getTitlesWidget: bottomTitles,
+                reservedSize: 42,
               ),
             ),
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 40,
-                interval: 50,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    value.toInt().toString(),
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 10,
-                    ),
-                  );
-                },
+                interval: 20,
               ),
             ),
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          gridData: FlGridData(
-            show: true,
-            horizontalInterval: 50,
-            checkToShowHorizontalLine: (value) => value % 50 == 0,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: Colors.black12,
-              strokeWidth: 1,
+            rightTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
             ),
           ),
-          borderData: FlBorderData(
-            show: true,
-            border: Border.all(color: Colors.black12),
-          ),
-          barGroups: stats.entries.map((entry) {
-            return BarChartGroupData(
-              x: stats.keys.toList().indexOf(entry.key),
-              barRods: [
-                BarChartRodData(
-                  toY: entry.value.toDouble(),
-                  color: color,
-                  width: 20,
-                  borderRadius: BorderRadius.circular(4),
-                  backDrawRodData: BackgroundBarChartRodData(
-                    show: true,
-                    toY: 200,
-                    color: color.withOpacity(0.1),
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
+          gridData: FlGridData(show: true),
+          borderData: FlBorderData(show: false),
         ),
       ),
+    );
+  }
+
+  BarChartGroupData makeGroupData(int x, int y, Color color) {
+    return BarChartGroupData(
+      x: x,
+      barRods: [
+        BarChartRodData(
+          toY: y.toDouble(),
+          color: color,
+          width: 20,
+          borderRadius: BorderRadius.circular(4),
+          backDrawRodData: BackgroundBarChartRodData(
+            show: true,
+            toY: 200,
+            color: color.withOpacity(0.1),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget bottomTitles(double value, TitleMeta meta) {
+    const style = TextStyle(
+      color: Colors.black87,
+      fontWeight: FontWeight.bold,
+      fontSize: 12,
+    );
+    Widget text;
+    switch (value.toInt()) {
+      case 0:
+        text = const Text('HP', style: style);
+        break;
+      case 1:
+        text = const Text('ATK', style: style);
+        break;
+      case 2:
+        text = const Text('DEF', style: style);
+        break;
+      case 3:
+        text = const Text('SpA', style: style);
+        break;
+      case 4:
+        text = const Text('SpD', style: style);
+        break;
+      case 5:
+        text = const Text('SPD', style: style);
+        break;
+      default:
+        text = const Text('', style: style);
+        break;
+    }
+    return SideTitleWidget(
+      axisSide: meta.axisSide,
+      space: 4.0,
+      child: text,
     );
   }
 }

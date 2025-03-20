@@ -5,47 +5,53 @@ import 'package:pokedexproject/class/pokemon.dart';
 
 class CharacterApi {
   static const String _baseUrl = 'https://pokeapi.co/api/v2';
-  static const int _batchSize = 20;
+  static const int _batchSize =
+      50; // Increased batch size for better performance
 
-  // Cache for Pokemon details to avoid duplicate requests
   final Map<String, Pokemon> _cachepokemons = {};
+  List<Pokemon>? _allPokemons;
 
-  Future<List<Pokemon>> getPokemon(int offset) async {
+  Future<List<Pokemon>> getAllPokemons() async {
+    if (_allPokemons != null) {
+      return _allPokemons!;
+    }
+
     try {
       final data = await _fetchFromApi(
-          '$_baseUrl/pokemon?offset=$offset&limit=$_batchSize');
+          '$_baseUrl/pokemon?limit=10000'); // Get all available Pokémon
 
-      final urls =
-          List<String>.from(data['results'].map((pokemon) => pokemon['url']));
+      final urls = data['results']
+          .map<String>((pokemon) => pokemon['url'] as String)
+          .toList();
 
-      return _processPokemonBatch(urls);
+      _allPokemons = await _processPokemonBatch(urls);
+      return _allPokemons!;
     } catch (e) {
-      print('Error fetching Pokemon list: $e');
+      debugPrint('Error fetching Pokemon list: $e');
       throw Exception('Failed to load Pokémon');
     }
   }
 
-  Future<List<Pokemon>> getPokemonByType(String type) async {
+  Future<List<Pokemon>> getAllPokemonByType(String type) async {
     try {
-      final data = await _fetchFromApi('$_baseUrl/type/${type.toLowerCase()}');
+      // Ensure all Pokémon are fetched and cached
+      final allPokemons = await getAllPokemons();
 
-      final urls = data['pokemon']
-          .where((p) => p['pokemon']?['url'] != null)
-          .map<String>((p) => p['pokemon']['url'])
-          .cast<String>()
+      // Filter Pokémon by type locally
+      return allPokemons
+          .where((pokemon) => pokemon.types
+              .map((t) => t.toLowerCase())
+              .contains(type.toLowerCase()))
           .toList();
-
-      return _processPokemonBatch(urls);
     } catch (e) {
-      print('Error in getPokemonByType: $e');
-      throw Exception('Failed to load Pokémon by type');
+      debugPrint('Error in getAllPokemonByType: $e');
+      throw Exception('Failed to load all Pokémon by type');
     }
   }
 
   Future<List<Pokemon>> _processPokemonBatch(List<String> urls) async {
     final List<Pokemon> pokemons = [];
 
-    // Process in smaller batches to avoid overwhelming the API
     for (var i = 0; i < urls.length; i += _batchSize) {
       final end = (i + _batchSize < urls.length) ? i + _batchSize : urls.length;
       final batch = urls.sublist(i, end);
@@ -60,7 +66,6 @@ class CharacterApi {
   }
 
   Future<Pokemon?> _getPokemonDetails(String url) async {
-    // Check cache first
     if (_cachepokemons.containsKey(url)) {
       return _cachepokemons[url];
     }
@@ -84,11 +89,10 @@ class CharacterApi {
         },
       );
 
-      // Cache the result
       _cachepokemons[url] = pokemon;
       return pokemon;
     } catch (e) {
-      print('Error fetching Pokemon details: $e');
+      debugPrint('Error fetching Pokemon details: $e');
       return null;
     }
   }
