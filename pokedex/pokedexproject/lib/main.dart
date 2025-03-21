@@ -38,8 +38,8 @@ class _MainAppState extends State<MainApp> {
           foregroundColor: Colors.white,
         ),
         scrollbarTheme: const ScrollbarThemeData(
-          thickness: MaterialStatePropertyAll(6.0),
-          thumbColor: MaterialStatePropertyAll(Colors.grey),
+          thickness: WidgetStatePropertyAll(6.0),
+          thumbColor: WidgetStatePropertyAll(Colors.grey),
         ),
       ),
       darkTheme: ThemeData(
@@ -51,8 +51,8 @@ class _MainAppState extends State<MainApp> {
           foregroundColor: Colors.white,
         ),
         scrollbarTheme: const ScrollbarThemeData(
-          thickness: MaterialStatePropertyAll(6.0),
-          thumbColor: MaterialStatePropertyAll(Colors.grey),
+          thickness: WidgetStatePropertyAll(6.0),
+          thumbColor: WidgetStatePropertyAll(Colors.grey),
         ),
       ),
       home: PokeWidget(onThemeToggle: toggleTheme, isDarkMode: isDarkMode),

@@ -69,16 +69,6 @@ class _PokeWidgetState extends State<PokeWidget> {
     super.initState();
     // _loadFavorites();
     getCharactersfromApi();
-    _scrollController.addListener(_scrollListener);
-  }
-
-  void _scrollListener() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 500) {
-      if (!isLoading && selectedType.isEmpty && hasMorePokemons) {
-        getCharactersfromApi();
-      }
-    }
   }
 
   void getCharactersfromApi() async {
@@ -176,16 +166,25 @@ class _PokeWidgetState extends State<PokeWidget> {
   void _toggleFavorite(Pokemon pokemon) async {
     final prefs = await SharedPreferences.getInstance();
     final notis = NotiService();
+    setState(() {
+      pokemon.isFavorite = !pokemon.isFavorite;
+      if (showFavoritesOnly) {
+        filteredPokeList = pokeList.where((p) => p.isFavorite).toList();
+      }
+    });
     final favoritePokemons =
         pokeList.where((p) => p.isFavorite).map((p) => p.name).toList();
     await prefs.setStringList('favoritePokemons', favoritePokemons);
     notis.showNotification(
         title: 'Pokemon Favorito',
-        body: 'Has marcado a ${pokemon.name} como favorito');
+        body: pokemon.isFavorite
+            ? 'Has marcado a ${pokemon.name} como favorito'
+            : 'Has desmarcado a ${pokemon.name} como favorito');
   }
 
   void _filterPokemonList(String searchQuery) {
     setState(() {
+      showFavoritesOnly = false; // Desactivar el filtro de favoritos
       filteredPokeList = pokeList
           .where((pokemon) =>
               pokemon.name.toLowerCase().contains(searchQuery.toLowerCase()))
@@ -208,7 +207,6 @@ class _PokeWidgetState extends State<PokeWidget> {
       if (mounted) {
         setState(() {
           pokeList = response;
-          _loadFavorites();
           filteredPokeList = List.from(pokeList);
           isLoading = false;
         });
@@ -395,6 +393,18 @@ class _PokeWidgetState extends State<PokeWidget> {
     );
   }
 
+  void _showRandomPokemonDetails() {
+    if (pokeList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No Pokémon available to show.')),
+      );
+      return;
+    }
+
+    final randomIndex = (pokeList..shuffle()).first;
+    _showPokemonDetails(randomIndex);
+  }
+
 // para crear el listview
   Widget _buildListItem(int index) {
     return PokemonListItem(
@@ -404,6 +414,20 @@ class _PokeWidgetState extends State<PokeWidget> {
       isDarkMode: widget.isDarkMode,
       typeColors: typeColors,
     );
+  }
+
+  void filterByTypeFavorites(String type) {
+    setState(() {
+      showFavoritesOnly = true; // Activar el filtro de favoritos
+      selectedType = type; // Establecer el tipo seleccionado
+
+      // Filtrar los Pokémon que son favoritos y coinciden con el tipo
+      filteredPokeList = pokeList.where((pokemon) {
+        return pokemon.isFavorite &&
+            pokemon.types.any((pokemonType) =>
+                pokemonType.toLowerCase() == type.toLowerCase());
+      }).toList();
+    });
   }
 
   // main list de los pokemons
@@ -450,6 +474,14 @@ class _PokeWidgetState extends State<PokeWidget> {
                 ? 'Sort by default order'
                 : 'Sort alphabetically',
             onPressed: _toggleSort,
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.shuffle,
+              color: widget.isDarkMode ? Colors.white : Colors.black,
+            ),
+            tooltip: 'Random Pokémon',
+            onPressed: _showRandomPokemonDetails,
           ),
         ],
       ),
@@ -501,11 +533,12 @@ class _PokeWidgetState extends State<PokeWidget> {
                             ?.withAlpha(77), // 0.3 opacity = 77 alpha
                         onSelected: (selected) {
                           if (selected) {
-                            _filterByType(type);
+                            filterByTypeFavorites(
+                                type); // Llamar a la función aquí
                           } else {
                             setState(() {
                               selectedType = '';
-                              _refresh();
+                              _filterFavorites(); // Volver a mostrar solo los favoritos
                             });
                           }
                         },
