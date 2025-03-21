@@ -9,6 +9,7 @@ import 'package:pokedexproject/widgets/pokemon_card.dart';
 import 'package:pokedexproject/widgets/pokemon_stats_chart.dart';
 import 'package:pokedexproject/widgets/pokemon_list_item.dart';
 import 'package:pokedexproject/widgets/pokeball_loading.dart';
+import 'package:pokedexproject/services/notification_services.dart';
 
 class PokeWidget extends StatefulWidget {
   final Function() onThemeToggle;
@@ -174,12 +175,13 @@ class _PokeWidgetState extends State<PokeWidget> {
 
   void _toggleFavorite(Pokemon pokemon) async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      pokemon.isFavorite = !pokemon.isFavorite;
-    });
+    final notis = NotiService();
     final favoritePokemons =
         pokeList.where((p) => p.isFavorite).map((p) => p.name).toList();
     await prefs.setStringList('favoritePokemons', favoritePokemons);
+    notis.showNotification(
+        title: 'Pokemon Favorito',
+        body: 'Has marcado a ${pokemon.name} como favorito');
   }
 
   void _filterPokemonList(String searchQuery) {
@@ -393,6 +395,7 @@ class _PokeWidgetState extends State<PokeWidget> {
     );
   }
 
+// para crear el listview
   Widget _buildListItem(int index) {
     return PokemonListItem(
       pokemon: filteredPokeList[index],
@@ -403,6 +406,7 @@ class _PokeWidgetState extends State<PokeWidget> {
     );
   }
 
+  // main list de los pokemons
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -513,27 +517,38 @@ class _PokeWidgetState extends State<PokeWidget> {
               Expanded(
                 child: filteredPokeList.isEmpty
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.asset(
-                              'assets/loading_pokeball.gif',
-                              height: 100,
-                              width: 100,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Cargando los Pokémon...',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: widget.isDarkMode
-                                    ? Colors.white
-                                    : Colors.black87,
+                        child: isLoading
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.asset(
+                                    'assets/loading_pokeball.gif',
+                                    height: 100,
+                                    width: 100,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Cargando los Pokémon...',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: widget.isDarkMode
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                'No hay Pokémon disponibles.',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: widget.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black87,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
                       )
                     : isGridView
                         ? GridView.builder(

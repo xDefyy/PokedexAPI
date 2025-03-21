@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:pokedexproject/class/pokemon.dart';
+import 'package:pokedexproject/services/network_manager.dart';
 
 class CharacterApi {
   static const String _baseUrl = 'https://pokeapi.co/api/v2';
@@ -10,15 +11,20 @@ class CharacterApi {
 
   final Map<String, Pokemon> _cachepokemons = {};
   List<Pokemon>? _allPokemons;
+  final ConnectivityService _connectivityService = ConnectivityService();
 
   Future<List<Pokemon>> getAllPokemons() async {
     if (_allPokemons != null) {
       return _allPokemons!;
     }
 
+    //ver si hay conexion a lawifi
+    if (await _connectivityService.isConnectedToWifi() == false) {
+      return _allPokemons!;
+    }
+
     try {
-      final data = await _fetchFromApi(
-          '$_baseUrl/pokemon?limit=10000'); // Get all available Pokémon
+      final data = await _fetchFromApi('$_baseUrl/pokemon?limit=10000');
 
       final urls = data['results']
           .map<String>((pokemon) => pokemon['url'] as String)
@@ -30,6 +36,23 @@ class CharacterApi {
       debugPrint('Error fetching Pokemon list: $e');
       throw Exception('Failed to load Pokémon');
     }
+  }
+
+  // BATCHES DE POKEMONS PARA PODER CARGAR LOS DATOS DE CADA UNO
+  Future<List<Pokemon>> _processPokemonBatch(List<String> urls) async {
+    final List<Pokemon> pokemons = [];
+
+    for (var i = 0; i < urls.length; i += _batchSize) {
+      final end = (i + _batchSize < urls.length) ? i + _batchSize : urls.length;
+      final batch = urls.sublist(i, end);
+
+      final futures = batch.map((url) => _getPokemonDetails(url));
+      final results = await Future.wait(futures, eagerError: false);
+
+      pokemons.addAll(results.whereType<Pokemon>());
+    }
+
+    return pokemons;
   }
 
   Future<List<Pokemon>> getAllPokemonByType(String type) async {
@@ -47,22 +70,6 @@ class CharacterApi {
       debugPrint('Error in getAllPokemonByType: $e');
       throw Exception('Failed to load all Pokémon by type');
     }
-  }
-
-  Future<List<Pokemon>> _processPokemonBatch(List<String> urls) async {
-    final List<Pokemon> pokemons = [];
-
-    for (var i = 0; i < urls.length; i += _batchSize) {
-      final end = (i + _batchSize < urls.length) ? i + _batchSize : urls.length;
-      final batch = urls.sublist(i, end);
-
-      final futures = batch.map((url) => _getPokemonDetails(url));
-      final results = await Future.wait(futures, eagerError: false);
-
-      pokemons.addAll(results.whereType<Pokemon>());
-    }
-
-    return pokemons;
   }
 
   Future<Pokemon?> _getPokemonDetails(String url) async {
