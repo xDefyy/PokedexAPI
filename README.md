@@ -72,8 +72,12 @@ flutter run
 ---
 
 ## 📷 Capturas de Pantalla
-_Añade aquí capturas de pantalla de la aplicación en funcionamiento._
-
+![image](https://github.com/user-attachments/assets/637e6fea-fe5d-40d8-8e07-f2aa3bdb58aa)
+![image](https://github.com/user-attachments/assets/8b0424cd-4bbb-4b6e-8fbf-41ec72cd1433)
+![image](https://github.com/user-attachments/assets/f8ca8b6b-a866-4e73-b75f-d36a9fd6f7b1)
+![image](https://github.com/user-attachments/assets/bc0722d3-6780-471e-bcb5-dddf6334f0fb)
+![image](https://github.com/user-attachments/assets/71de92d3-f8c8-419f-88fb-16029267989d)
+![image](https://github.com/user-attachments/assets/cf3afc46-201e-442b-aa20-e41c229de25b)
 ---
 
 ## 🔮 Mejoras Futuras
