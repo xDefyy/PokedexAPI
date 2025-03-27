@@ -10,6 +10,7 @@ import 'package:pokedexproject/widgets/pokemon_stats_chart.dart';
 import 'package:pokedexproject/widgets/pokemon_list_item.dart';
 import 'package:pokedexproject/widgets/pokeball_loading.dart';
 import 'package:pokedexproject/services/notification_services.dart';
+import 'package:pokedexproject/screens/pokemon_compare_screen.dart';
 
 class PokeWidget extends StatefulWidget {
   final Function() onThemeToggle;
@@ -441,6 +442,17 @@ class _PokeWidgetState extends State<PokeWidget> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.compare_arrows),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PokemonCompareScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: Icon(
               widget.isDarkMode ? Icons.light_mode : Icons.dark_mode,
               color: widget.isDarkMode ? Colors.white : Colors.black,
@@ -561,26 +573,15 @@ class _PokeWidgetState extends State<PokeWidget> {
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'Cargando los Pokémon...',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: widget.isDarkMode
-                                          ? Colors.white
-                                          : Colors.black87,
-                                    ),
+                                    'ポケモンをロード中...',
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
                                   ),
                                 ],
                               )
                             : Text(
-                                'No hay Pokémon disponibles.',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: widget.isDarkMode
-                                      ? Colors.white
-                                      : Colors.black87,
-                                ),
+                                'ポケモンが見つかりません',
+                                style: Theme.of(context).textTheme.bodyLarge,
                               ),
                       )
                     : isGridView
